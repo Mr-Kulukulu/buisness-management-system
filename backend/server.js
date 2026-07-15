@@ -1,8 +1,10 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
+const User = require("./models/User");
 
 const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
@@ -14,7 +16,20 @@ const backupRoutes = require("./routes/backup");
 
 const app = express();
 
-connectDB();
+async function ensureAdminUser() {
+  try {
+    const existing = await User.findOne({ username: "admin" });
+    if (existing) return;
+
+    const hash = await bcrypt.hash("admin123", 10);
+    await User.create({ username: "admin", password: hash });
+    console.log("Default admin user created -> username: admin | password: admin123");
+  } catch (err) {
+    console.error("Could not auto-create admin user:", err.message);
+  }
+}
+
+connectDB().then(ensureAdminUser);
 
 app.use(cors({
   origin: process.env.CLIENT_URL || "http://localhost:5173",
