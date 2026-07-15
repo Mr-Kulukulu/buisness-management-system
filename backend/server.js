@@ -31,8 +31,22 @@ async function ensureAdminUser() {
 
 connectDB().then(ensureAdminUser);
 
+// CLIENT_URL can be a single URL or a comma-separated list, e.g.
+// "https://myapp.vercel.app,https://myapp-git-main-me.vercel.app"
+// Any *.vercel.app origin is also allowed automatically, since Vercel
+// generates a new preview URL for every branch/deploy.
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim());
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // non-browser requests (curl, server-to-server)
+    if (allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+      return callback(null, true);
+    }
+    callback(new Error("Not allowed by CORS"));
+  },
   credentials: true
 }));
 app.use(express.json());
